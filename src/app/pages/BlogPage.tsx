@@ -2,18 +2,65 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
-import { Calendar, Clock, Tag } from "lucide-react";
+import { Button } from "../components/ui/button"; // Import Button
+import { Calendar, Clock, Tag, Plus, X } from "lucide-react"; // Import Plus, X icons
 import { Post, categories, getAllPosts } from "../data/posts";
 
 export function BlogPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [isAddingPost, setIsAddingPost] = useState(false); // State for form visibility
+
+  // Form state
+  const [newPost, setNewPost] = useState<Partial<Post>>({
+    title: "",
+    excerpt: "",
+    category: "Full Stack",
+    tags: [],
+    readTime: "5 min",
+    content: "# New Post Content\n\nWrite your markdown here...",
+  });
+  const [tagInput, setTagInput] = useState("");
 
   // Load posts on mount
   useEffect(() => {
     setPosts(getAllPosts());
   }, []);
+
+  // Handle adding a new post
+  const handleAddPost = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newPost.title || !newPost.excerpt) return;
+
+    const id = newPost.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+    const date = new Date().toISOString().split('T')[0];
+    const tags = tagInput.split(",").map(t => t.trim()).filter(t => t);
+
+    const postToAdd: Post = {
+      id,
+      title: newPost.title,
+      excerpt: newPost.excerpt,
+      category: newPost.category || "Full Stack",
+      tags: tags.length > 0 ? tags : ["General"],
+      date: date,
+      readTime: newPost.readTime || "5 min",
+      content: newPost.content
+    } as Post;
+
+    setPosts([postToAdd, ...posts]);
+    setIsAddingPost(false);
+    setNewPost({
+      title: "",
+      excerpt: "",
+      category: "Full Stack",
+      tags: [],
+      readTime: "5 min",
+      content: "# New Post Content\n\nWrite your markdown here...",
+    });
+    setTagInput("");
+  };
 
   // Get all unique tags
   const allTags = Array.from(
@@ -33,7 +80,98 @@ export function BlogPage() {
       <div className="max-w-5xl mx-auto px-6">
         {/* Introduction Section */}
         <div className="mb-12">
-          <h1 className="font-serif text-5xl font-bold mb-8 text-gray-900">Blog</h1>
+          <div className="flex justify-between items-start mb-8">
+            <h1 className="font-serif text-5xl font-bold text-gray-900">Blog</h1>
+            <Button onClick={() => setIsAddingPost(!isAddingPost)}>
+              {isAddingPost ? <><X className="w-4 h-4 mr-2" /> Cancel</> : <><Plus className="w-4 h-4 mr-2" /> Add Post</>}
+            </Button>
+          </div>
+          
+          {/* Add Post Form */}
+          {isAddingPost && (
+            <Card className="p-6 mb-8 border-blue-200 shadow-md bg-white">
+              <h2 className="text-xl font-bold mb-4">Create New Post</h2>
+              <form onSubmit={handleAddPost} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <input
+                      required
+                      type="text"
+                      className="w-full p-2 border rounded-md"
+                      value={newPost.title}
+                      onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+                      placeholder="Post Title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select
+                      className="w-full p-2 border rounded-md"
+                      value={newPost.category}
+                      onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}
+                    >
+                      {categories.filter(c => c !== "All").map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Excerpt</label>
+                  <textarea
+                    required
+                    className="w-full p-2 border rounded-md"
+                    rows={2}
+                    value={newPost.excerpt}
+                    onChange={(e) => setNewPost({ ...newPost, excerpt: e.target.value })}
+                    placeholder="Brief description of the post..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                    <input
+                      type="text"
+                      className="w-full p-2 border rounded-md"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      placeholder="AWS, React, Design..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Read Time</label>
+                    <input
+                      type="text"
+                      className="w-full p-2 border rounded-md"
+                      value={newPost.readTime}
+                      onChange={(e) => setNewPost({ ...newPost, readTime: e.target.value })}
+                      placeholder="5 min"
+                    />
+                  </div>
+                </div>
+
+                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Content (Markdown)</label>
+                  <textarea
+                    className="w-full p-2 border rounded-md font-mono text-sm"
+                    rows={6}
+                    value={newPost.content}
+                    onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+                    placeholder="# Hello World"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="ghost" onClick={() => setIsAddingPost(false)}>Cancel</Button>
+                  <Button type="submit">Create Post</Button>
+                </div>
+              </form>
+            </Card>
+          )}
+
           <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
             <p className="text-lg text-gray-700 leading-relaxed mb-3">
               Welcome to my digital garden 🌱 where I document my journey as a
