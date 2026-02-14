@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useEffect, useState } from "react";
 import { getPostById } from "../data/posts";
+import { API_CONFIG } from "../../config/api";
 
 export function PostDetailPage() {
   const { postId } = useParams<{ postId: string }>();
@@ -30,7 +31,7 @@ export function PostDetailPage() {
       try {
         // Fetch post metadata from API
         // This is a placeholder for your Lambda/API call
-        const apiResponse = await fetch(`https://api.example.com/posts/${postId}`);
+        const apiResponse = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.getPost(postId)}`);
         if (!apiResponse.ok) throw new Error('Failed to fetch post metadata');
         
         const data = await apiResponse.json();
