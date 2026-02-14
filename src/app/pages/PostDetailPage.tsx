@@ -27,7 +27,7 @@ export function PostDetailPage() {
 
       try {
         // Try to import the markdown file
-        const markdown = await import(`../posts/${postId}.md?raw`);
+        const markdown = await import(`../../../posts/${postId}.md?raw`);
         setContent(markdown.default);
       } catch (error) {
         // If file doesn't exist, use placeholder content

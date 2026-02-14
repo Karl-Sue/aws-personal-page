@@ -59,7 +59,7 @@ export const categories = [
 // Load markdown content for a post
 export async function loadPostContent(id: string): Promise<string> {
   try {
-    const response = await fetch(`/src/app/posts/${id}.md`);
+    const response = await fetch(`/posts/${id}.md`);
     if (!response.ok) throw new Error("Post not found");
     return await response.text();
   } catch (error) {
