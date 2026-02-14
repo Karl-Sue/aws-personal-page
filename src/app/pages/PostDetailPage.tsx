@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useParams, Link } from "react-router-dom";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -11,6 +12,7 @@ export function PostDetailPage() {
   const { postId } = useParams<{ postId: string }>();
   const [content, setContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [assetsBaseUrl, setAssetsBaseUrl] = useState<string>("");
 
   const post = postId ? getPostById(postId) : null;
 
@@ -26,9 +28,30 @@ export function PostDetailPage() {
       }
 
       try {
-        // Try to import the markdown file
-        const markdown = await import(`../../../posts/${postId}.md?raw`);
-        setContent(markdown.default);
+        // Fetch post metadata from API
+        // This is a placeholder for your Lambda/API call
+        const apiResponse = await fetch(`https://api.example.com/posts/${postId}`);
+        if (!apiResponse.ok) throw new Error('Failed to fetch post metadata');
+        
+        const data = await apiResponse.json();
+        // data should look like { contentUrl: string, assetsBaseUrl?: string }
+        const contentUrl = data.contentUrl;
+        
+        if (!contentUrl) throw new Error('API response missing contentUrl');
+        
+        // Fetch the markdown content using the URL from API
+        const markdownResponse = await fetch(contentUrl);
+        if (!markdownResponse.ok) throw new Error('Failed to fetch markdown content');
+        
+        const markdown = await markdownResponse.text();
+        setContent(markdown);
+        
+        // Store assetsBaseUrl for image rendering if provided, or derive from contentUrl
+        // For now using contentUrl's origin + folder structure assumption
+        // e.g. https://bucket.com/posts/123.md -> https://bucket.com
+        const assetsBaseUrl = data.assetsBaseUrl || new URL(contentUrl).origin;
+        setAssetsBaseUrl(assetsBaseUrl);
+        
       } catch (error) {
         // If file doesn't exist, use placeholder content
         setContent(getPlaceholderContent(postId, post.title));
@@ -115,7 +138,21 @@ export function PostDetailPage() {
             </div>
           ) : (
             <article className="prose prose-lg max-w-none prose-headings:font-serif prose-h1:text-4xl prose-h1:font-bold prose-h2:text-3xl prose-h2:font-bold prose-h3:text-xl prose-h3:font-bold prose-p:text-lg prose-p:leading-relaxed prose-p:text-gray-700">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  img: ({ node, ...props }) => {
+                    let src = props.src || '';
+                    if (!src.startsWith('http') && assetsBaseUrl) {
+                        // Ensure baseUrl doesn't end with slash and src starts with slash, or handle join
+                        const base = assetsBaseUrl.replace(/\/$/, '');
+                        const path = src.startsWith('/') ? src : `/${src}`;
+                        src = `${base}${path}`;
+                    }
+                    return <img {...props} src={src} />;
+                  }
+                }}
+              >
                 {content}
               </ReactMarkdown>
             </article>
